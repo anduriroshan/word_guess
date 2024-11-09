@@ -13,7 +13,6 @@ except LookupError:
     nltk.download('averaged_perceptron_tagger')
 
 # Function to fetch a random noun
-@st.cache_resource
 def fetch_random_noun():
     response = requests.get("https://api.datamuse.com/words?rel_jja=noun")
     if response.status_code == 200:
