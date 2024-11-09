@@ -1,8 +1,0 @@
-pandas
-numpy==2.0
-streamlit
-spacy
-random
-requests
-
--e .
