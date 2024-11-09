@@ -79,7 +79,7 @@ def get_semantic_hints(word, num_hints=3):
 
 # Initialize session state
 if 'target_word' not in st.session_state:
-    st.session_state.target_word = 'condom'
+    st.session_state.target_word = fetch_random_noun()
 if 'attempts' not in st.session_state:
     st.session_state.attempts = 0
 if 'game_over' not in st.session_state:
