@@ -39,7 +39,6 @@ def calculate_similarity(guess, target):
             if similarity and similarity > max_similarity:
                 max_similarity = similarity
     
-    # If similarity is 1, return 0, otherwise return a value between 0 and 1000
     return int((1 - max_similarity) * 1000) if max_similarity > 0 else 1000
 
 def get_semantic_hints(word, num_hints=3):
@@ -80,22 +79,19 @@ def get_semantic_hints(word, num_hints=3):
 
 # Initialize session state
 if 'target_word' not in st.session_state:
-    st.session_state.target_word = fetch_random_noun()
+    st.session_state.target_word = 'condom'
 if 'attempts' not in st.session_state:
     st.session_state.attempts = 0
 if 'game_over' not in st.session_state:
     st.session_state.game_over = False
 if 'hints_used' not in st.session_state:
     st.session_state.hints_used = 0
-if 'shown_hints' not in st.session_state:
-    st.session_state.shown_hints = []
 
 def reset_game():
     st.session_state.target_word = fetch_random_noun()
     st.session_state.attempts = 0
     st.session_state.game_over = False
     st.session_state.hints_used = 0
-    st.session_state.shown_hints = []
 
 # Main game UI
 st.title("Word Guesser Game")
@@ -139,9 +135,6 @@ if st.session_state.target_word:
             new_hints = get_semantic_hints(st.session_state.target_word)
             if new_hints:
                 hint_type, hint_word = random.choice(new_hints)
-                while (hint_type, hint_word) in st.session_state.shown_hints and len(st.session_state.shown_hints) < len(new_hints):
-                    hint_type, hint_word = random.choice(new_hints)
-                st.session_state.shown_hints.append((hint_type, hint_word))
                 st.write(f"Hint: Think of words like '{hint_word}' ({hint_type})")
             else:
                 st.write("Sorry, couldn't generate a hint right now.")
@@ -154,12 +147,6 @@ if st.session_state.target_word:
     # Show attempt counter and hints remaining
     st.sidebar.write(f"Attempts remaining: {10 - st.session_state.attempts}")
     st.sidebar.write(f"Hints remaining: {3 - st.session_state.hints_used}")
-    
-    # Display all used hints
-    if st.session_state.shown_hints:
-        st.sidebar.write("Previous hints:")
-        for hint_type, hint_word in st.session_state.shown_hints:
-            st.sidebar.write(f"- {hint_word} ({hint_type})")
 
 else:
     st.error("No target word available for guessing. Please try refreshing the page.")
