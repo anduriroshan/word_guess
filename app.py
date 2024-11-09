@@ -144,7 +144,7 @@ if st.session_state.target_word:
             st.rerun()
 
     # Show attempt counter and hints remaining
-    st.sidebar.write(f"Attempts remaining: {10 - st.session_state.attempts}")
+    st.sidebar.write(f"Attempts remaining: {20 - st.session_state.attempts}")
     st.sidebar.write(f"Hints remaining: {3 - st.session_state.hints_used}")
 
 else:
