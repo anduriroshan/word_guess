@@ -1,19 +1,16 @@
 import streamlit as st
 import random
 import requests
-import spacy
-import numpy as np
+import nltk
+from nltk.corpus import wordnet
+from difflib import SequenceMatcher
 
-# Load spaCy model with word vectors
-@st.cache_resource
-def load_spacy_model():
-    try:
-        return spacy.load('en_core_web_md')
-    except OSError:
-        st.error("Please install the spaCy model first using: python -m spacy download en_core_web_md")
-        return None
-
-nlp = load_spacy_model()
+# Download required NLTK data
+try:
+    nltk.data.find('corpora/wordnet')
+except LookupError:
+    nltk.download('wordnet')
+    nltk.download('averaged_perceptron_tagger')
 
 # Function to fetch a random noun
 @st.cache_resource
@@ -23,34 +20,65 @@ def fetch_random_noun():
         words = response.json()
         single_word_nouns = [word['word'] for word in words if word['word'].isalpha()]
         if single_word_nouns:
-            # Filter words that exist in spaCy's vocabulary
-            valid_words = [word for word in single_word_nouns if word in nlp.vocab]
-            if valid_words:
-                return random.choice(valid_words)
+            return random.choice(single_word_nouns)
     st.error("Failed to fetch noun or no suitable nouns available")
     return None
 
-# Calculate semantic similarity using spaCy
+# Calculate semantic similarity and return score from 1000 to 0
 def calculate_similarity(guess, target):
-    if nlp is None:
-        return None
+    guess_synsets = wordnet.synsets(guess.lower())
+    target_synsets = wordnet.synsets(target.lower())
     
-    # Get spaCy tokens for both words
-    guess_token = nlp(guess.lower())[0]
-    target_token = nlp(target.lower())[0]
+    if not guess_synsets or not target_synsets:
+        return 1000 - int(SequenceMatcher(None, guess.lower(), target.lower()).ratio() * 1000)
     
-    # Check if both words have vectors
-    if not guess_token.has_vector or not target_token.has_vector:
-        st.warning(f"One or both words don't have semantic vectors. Falling back to string similarity.")
-        # Fallback to string similarity
-        from difflib import SequenceMatcher
-        return SequenceMatcher(None, guess.lower(), target.lower()).ratio()
+    max_similarity = 0
+    for guess_syn in guess_synsets:
+        for target_syn in target_synsets:
+            similarity = guess_syn.path_similarity(target_syn)
+            if similarity and similarity > max_similarity:
+                max_similarity = similarity
     
-    # Calculate cosine similarity between word vectors
-    similarity = guess_token.similarity(target_token)
-    return similarity
+    # If similarity is 1, return 0, otherwise return a value between 0 and 1000
+    return int((1 - max_similarity) * 1000) if max_similarity > 0 else 1000
 
-# Initialize session state for game state management
+def get_semantic_hints(word, num_hints=3):
+    """Get different types of semantically related words as hints"""
+    hints = set()
+    synsets = wordnet.synsets(word)
+    
+    if synsets:
+        primary_synset = synsets[0]
+        
+        # Get synonyms
+        for lemma in primary_synset.lemmas():
+            if lemma.name() != word and len(lemma.name()) > 2:
+                hints.add(("synonym", lemma.name()))
+        
+        # Get hypernyms (more general terms)
+        for hypernym in primary_synset.hypernyms():
+            for lemma in hypernym.lemmas():
+                if lemma.name() != word and len(lemma.name()) > 2:
+                    hints.add(("category", lemma.name()))
+        
+        # Get hyponyms (more specific terms)
+        for hyponym in primary_synset.hyponyms():
+            for lemma in hyponym.lemmas():
+                if lemma.name() != word and len(lemma.name()) > 2:
+                    hints.add(("similar", lemma.name()))
+
+        # Get holonyms (whole of which the word is a part)
+        for holonym in primary_synset.member_holonyms() + primary_synset.part_holonyms():
+            for lemma in holonym.lemmas():
+                if lemma.name() != word and len(lemma.name()) > 2:
+                    hints.add(("related", lemma.name()))
+
+    # Convert hints to list and shuffle
+    hints_list = list(hints)
+    random.shuffle(hints_list)
+    return hints_list[:num_hints]
+
+# Initialize session state
 if 'target_word' not in st.session_state:
     st.session_state.target_word = fetch_random_noun()
 if 'attempts' not in st.session_state:
@@ -59,12 +87,15 @@ if 'game_over' not in st.session_state:
     st.session_state.game_over = False
 if 'hints_used' not in st.session_state:
     st.session_state.hints_used = 0
+if 'shown_hints' not in st.session_state:
+    st.session_state.shown_hints = []
 
 def reset_game():
     st.session_state.target_word = fetch_random_noun()
     st.session_state.attempts = 0
     st.session_state.game_over = False
     st.session_state.hints_used = 0
+    st.session_state.shown_hints = []
 
 # Main game UI
 st.title("Word Guesser Game")
@@ -78,32 +109,24 @@ if st.session_state.target_word:
         st.session_state.attempts += 1
         similarity_score = calculate_similarity(user_guess, st.session_state.target_word)
         
-        if similarity_score is not None:
-            st.write(f"Similarity Score: {similarity_score:.2f}")
-            
-            if similarity_score > 0.85:  # Adjusted threshold for semantic similarity
-                st.success(f"🎉 Correct! The word was '{st.session_state.target_word}'")
-                st.session_state.game_over = True
-            elif similarity_score > 0.7:
-                st.warning("Very close! Try a similar word!")
-            elif similarity_score > 0.5:
-                st.info("You're getting warmer!")
-            else:
-                st.write("Not quite, keep trying!")
-            
-            # Show some related words as context
-            if similarity_score > 0.3:
-                guess_token = nlp(user_guess.lower())[0]
-                related_words = []
-                for word in guess_token.vocab:
-                    if word.has_vector and word.is_alpha and len(word.text) > 2:
-                        similarity = word.similarity(nlp(st.session_state.target_word)[0])
-                        if 0.3 < similarity < 0.85:
-                            related_words.append((word.text, similarity))
-                related_words.sort(key=lambda x: x[1], reverse=True)
-                if related_words[:3]:
-                    st.write("Some words in this semantic space:", 
-                            ", ".join(f"{word}" for word, _ in related_words[:3]))
+        st.write(f"Similarity Score: {similarity_score}")
+        
+        if similarity_score == 0:
+            st.success(f"🎉 Correct! The word was '{st.session_state.target_word}'")
+            st.session_state.game_over = True
+        elif similarity_score <= 20:
+            st.warning("Almost there.........")
+        elif similarity_score <= 200:
+            st.warning("Very close! Try a similar word!")
+            related = get_semantic_hints(user_guess, 2)
+            if related:
+                st.write("Some related words:")
+                for hint_type, word in related:
+                    st.write(f"- {word} ({hint_type})")
+        elif similarity_score <= 500:
+            st.info("You're getting warmer!")
+        else:
+            st.write("Not quite, keep trying!")
         
         if st.session_state.attempts >= 10 and not st.session_state.game_over:
             st.error(f"Game Over! The word was '{st.session_state.target_word}'")
@@ -113,31 +136,30 @@ if st.session_state.target_word:
     with col1:
         if st.button("Get a Hint") and st.session_state.hints_used < 3:
             st.session_state.hints_used += 1
-            if st.session_state.hints_used == 1:
-                st.write(f"The word has {len(st.session_state.target_word)} letters")
-            elif st.session_state.hints_used == 2:
-                st.write(f"The word starts with '{st.session_state.target_word[0]}'")
+            new_hints = get_semantic_hints(st.session_state.target_word)
+            if new_hints:
+                hint_type, hint_word = random.choice(new_hints)
+                while (hint_type, hint_word) in st.session_state.shown_hints and len(st.session_state.shown_hints) < len(new_hints):
+                    hint_type, hint_word = random.choice(new_hints)
+                st.session_state.shown_hints.append((hint_type, hint_word))
+                st.write(f"Hint: Think of words like '{hint_word}' ({hint_type})")
             else:
-                # Give a semantic hint using a similar word
-                target_token = nlp(st.session_state.target_word)[0]
-                similar_words = []
-                for word in target_token.vocab:
-                    if word.has_vector and word.is_alpha and len(word.text) > 2:
-                        similarity = word.similarity(target_token)
-                        if 0.5 < similarity < 0.85:
-                            similar_words.append((word.text, similarity))
-                if similar_words:
-                    hint_word = max(similar_words, key=lambda x: x[1])[0]
-                    st.write(f"Think of words similar to: {hint_word}")
+                st.write("Sorry, couldn't generate a hint right now.")
     
     with col2:
         if st.button("New Game"):
             reset_game()
-            st.experimental_rerun()
+            st.rerun()
 
     # Show attempt counter and hints remaining
     st.sidebar.write(f"Attempts remaining: {10 - st.session_state.attempts}")
     st.sidebar.write(f"Hints remaining: {3 - st.session_state.hints_used}")
+    
+    # Display all used hints
+    if st.session_state.shown_hints:
+        st.sidebar.write("Previous hints:")
+        for hint_type, hint_word in st.session_state.shown_hints:
+            st.sidebar.write(f"- {hint_word} ({hint_type})")
 
 else:
     st.error("No target word available for guessing. Please try refreshing the page.")
