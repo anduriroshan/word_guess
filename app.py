@@ -123,7 +123,7 @@ if st.session_state.target_word:
         else:
             st.write("Not quite, keep trying!")
         
-        if st.session_state.attempts >= 10 and not st.session_state.game_over:
+        if st.session_state.attempts >= 20 and not st.session_state.game_over:
             st.error(f"Game Over! The word was '{st.session_state.target_word}'")
             st.session_state.game_over = True
     
