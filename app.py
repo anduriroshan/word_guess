@@ -53,38 +53,19 @@ def calculate_enhanced_similarity(guess, target):
     """
     guess_synsets = wordnet.synsets(guess.lower())
     target_synsets = wordnet.synsets(target.lower())
-    
-    if not guess_synsets or not target_synsets:
-        # Fallback to string similarity if words not in WordNet
-        return 1000 - int(SequenceMatcher(None, guess.lower(), target.lower()).ratio() * 1000)
-    
-    # Get primary synsets
-    guess_synset = guess_synsets[0]
-    target_synset = target_synsets[0]
-    
-    # Calculate different similarity metrics
-    path_sim = guess_synset.path_similarity(target_synset) or 0
-    wup_sim = guess_synset.wup_similarity(target_synset) or 0
-    
-    # Definition similarity
-    guess_def = set(guess_synset.definition().lower().split())
-    target_def = set(target_synset.definition().lower().split())
-    def_sim = len(guess_def.intersection(target_def)) / max(len(guess_def.union(target_def)), 1)
-    
-    # Usage example similarity
-    guess_examples = set(" ".join(guess_synset.examples()).lower().split()) if guess_synset.examples() else set()
-    target_examples = set(" ".join(target_synset.examples()).lower().split()) if target_synset.examples() else set()
-    usage_sim = len(guess_examples.intersection(target_examples)) / max(len(guess_examples.union(target_examples)), 1) if guess_examples and target_examples else 0
-    
-    # Combine similarities with weights
-    combined_sim = (
-        path_sim * 0.3 +      # Path similarity weight
-        wup_sim * 0.3 +       # Wu-Palmer similarity weight
-        def_sim * 0.2 +       # Definition similarity weight
-        usage_sim * 0.2       # Usage context similarity weight
-    )
-    
-    return int((1 - combined_sim) * 1000)
+    best_score = float('inf')
+
+    for guess_synset in guess_synsets:
+        for target_synset in target_synsets:
+            score = guess_synset.wup_similarity(target_synset)
+            if score is not None:
+                similarity_score = 1 - score
+                if similarity_score < best_score:
+                    best_score = similarity_score
+
+    if best_score == float('inf'):
+        return 1000  # No similarity found
+    return int(best_score * 1000)
 
 def get_semantic_hints(word):
     """Legacy wrapper for get_enhanced_semantic_hints"""
