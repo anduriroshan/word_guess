@@ -40,7 +40,7 @@ def calculate_similarity(guess, target):
     
     return int((1 - max_similarity) * 1000) if max_similarity > 0 else 1000
 
-def get_semantic_hints(word, num_hints=3):
+def get_semantic_hints(word, num_hints=5):
     """Get different types of semantically related words as hints"""
     hints = set()
     synsets = wordnet.synsets(word)
@@ -79,73 +79,105 @@ def get_semantic_hints(word, num_hints=3):
 # Initialize session state
 if 'target_word' not in st.session_state:
     st.session_state.target_word = fetch_random_noun()
-if 'attempts' not in st.session_state:
-    st.session_state.attempts = 0
 if 'game_over' not in st.session_state:
     st.session_state.game_over = False
-if 'hints_used' not in st.session_state:
-    st.session_state.hints_used = 0
+if 'previous_guesses' not in st.session_state:
+    st.session_state.previous_guesses = {}
+if 'hints' not in st.session_state:
+    st.session_state.hints = []
+if 'current_hint_index' not in st.session_state:
+    st.session_state.current_hint_index = 0
+if 'shown_hints' not in st.session_state:
+    st.session_state.shown_hints = []
 
 def reset_game():
     st.session_state.target_word = fetch_random_noun()
-    st.session_state.attempts = 0
     st.session_state.game_over = False
-    st.session_state.hints_used = 0
+    st.session_state.previous_guesses = {}
+    st.session_state.hints = []
+    st.session_state.current_hint_index = 0
+    st.session_state.shown_hints = []
 
 # Main game UI
 st.title("Word Guesser Game")
 
 if st.session_state.target_word:
-    st.write(f"Try to guess the noun! (Attempt #{st.session_state.attempts + 1})")
+    st.write("Try to guess the noun!")
     
-    user_guess = st.text_input("Enter your guess:", key="guess_input")
+    # Create a form for the guess input and submit button
+    with st.form(key='guess_form'):
+        user_guess = st.text_input("Enter your guess:", key="guess_input")
+        submit_guess = st.form_submit_button("Submit Guess")
     
-    if user_guess and not st.session_state.game_over:
-        st.session_state.attempts += 1
-        similarity_score = calculate_similarity(user_guess, st.session_state.target_word)
-        
-        st.write(f"Similarity Score: {similarity_score}")
-        
-        if similarity_score == 0:
-            st.success(f"🎉 Correct! The word was '{st.session_state.target_word}'")
-            st.session_state.game_over = True
-        elif similarity_score <= 20:
-            st.warning("Almost there.........")
-        elif similarity_score <= 200:
-            st.warning("Very close! Try a similar word!")
-            related = get_semantic_hints(user_guess, 2)
-            if related:
-                st.write("Some related words:")
-                for hint_type, word in related:
-                    st.write(f"- {word} ({hint_type})")
-        elif similarity_score <= 500:
-            st.info("You're getting warmer!")
-        else:
-            st.write("Not quite, keep trying!")
-        
-        if st.session_state.attempts >= 20 and not st.session_state.game_over:
-            st.error(f"Game Over! The word was '{st.session_state.target_word}'")
-            st.session_state.game_over = True
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("Get a Hint") and st.session_state.hints_used < 3:
-            st.session_state.hints_used += 1
-            new_hints = get_semantic_hints(st.session_state.target_word)
-            if new_hints:
-                hint_type, hint_word = random.choice(new_hints)
-                st.write(f"Hint: Think of words like '{hint_word}' ({hint_type})")
+    # Process guess only when submit button is clicked
+    if submit_guess and user_guess:
+        if user_guess.lower() in st.session_state.previous_guesses:
+            st.warning(f"You've already guessed '{user_guess}'! Try a different word.")
+        elif not st.session_state.game_over:
+            similarity_score = calculate_similarity(user_guess, st.session_state.target_word)
+            st.session_state.previous_guesses[user_guess.lower()] = similarity_score
+            
+            st.write(f"You are {similarity_score} miles far away from the answer.")
+            
+            if similarity_score == 0:
+                st.success(f"🎉 Correct! The word was '{st.session_state.target_word}'")
+                st.session_state.game_over = True
+            elif similarity_score <= 20:
+                st.warning("Almost there.........")
+            elif similarity_score <= 200:
+                st.warning("Very close! Try a similar word!")
+            elif similarity_score <= 500:
+                st.info("You're getting warmer!")
             else:
-                st.write("Sorry, couldn't generate a hint right now.")
+                st.write("Not quite, keep trying!")
+
+    # Game control buttons
+    col1, col2,col3,_, col5 = st.columns(5)
+    with col1:
+        if st.button("Get Hints"):
+            # Generate hints if not already generated
+            if not st.session_state.hints:
+                st.session_state.hints = get_semantic_hints(st.session_state.target_word)
+            
+            # If we have hints available
+            if st.session_state.hints:
+                # Get current hint
+                current_hint = st.session_state.hints[st.session_state.current_hint_index]
+                hint_type, hint_word = current_hint
+                
+                # Add to shown hints if not already shown
+                if current_hint not in st.session_state.shown_hints:
+                    st.session_state.shown_hints.append(current_hint)
+                
+                # Increment hint index, loop back to 0 if we reach the end
+                st.session_state.current_hint_index = (st.session_state.current_hint_index + 1) % len(st.session_state.hints)
+                
+                # Display the current hint along with all previously shown hints
+                st.write("Current hint:")
+                st.info(f"{hint_word} ({hint_type})")
+                
+                if len(st.session_state.shown_hints) > 1:
+                    st.write("Previous hints:")
+                    for prev_hint_type, prev_hint_word in st.session_state.shown_hints[:-1]:
+                        st.write(f"- {prev_hint_word} ({prev_hint_type})")
+            else:
+                st.write("Sorry, couldn't generate hints right now.")
     
-    with col2:
+    with col5:
         if st.button("New Game"):
             reset_game()
             st.rerun()
+    
+    with col3:
+        if st.button("Reveal Answer"):
+            st.write(f"The word was: {st.session_state.target_word}")
+            
 
-    # Show attempt counter and hints remaining
-    st.sidebar.write(f"Attempts remaining: {20 - st.session_state.attempts}")
-    st.sidebar.write(f"Hints remaining: {3 - st.session_state.hints_used}")
+    # Show previous guesses
+    if st.session_state.previous_guesses:
+        st.write("Your previous guesses:")
+        for guess, score in sorted(st.session_state.previous_guesses.items(), key=lambda x: x[1]):
+            st.write(f"- {guess} (Score: {score})")
 
 else:
     st.error("No target word available for guessing. Please try refreshing the page.")
