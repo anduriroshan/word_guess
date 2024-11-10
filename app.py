@@ -40,9 +40,9 @@ def calculate_similarity(guess, target):
     
     return int((1 - max_similarity) * 1000) if max_similarity > 0 else 1000
 
-def get_semantic_hints(word, num_hints=5):
-    """Get different types of semantically related words as hints"""
-    hints = set()
+def get_semantic_hints(word):
+    """Get all synonyms and hypernyms as hints"""
+    hints = []
     synsets = wordnet.synsets(word)
     
     if synsets:
@@ -51,30 +51,27 @@ def get_semantic_hints(word, num_hints=5):
         # Get synonyms
         for lemma in primary_synset.lemmas():
             if lemma.name() != word and len(lemma.name()) > 2:
-                hints.add(("synonym", lemma.name()))
+                hints.append(("synonym", lemma.name()))
         
-        # Get hypernyms (more general terms)
-        for hypernym in primary_synset.hypernyms():
-            for lemma in hypernym.lemmas():
-                if lemma.name() != word and len(lemma.name()) > 2:
-                    hints.add(("category", lemma.name()))
-        
-        # Get hyponyms (more specific terms)
-        for hyponym in primary_synset.hyponyms():
-            for lemma in hyponym.lemmas():
-                if lemma.name() != word and len(lemma.name()) > 2:
-                    hints.add(("similar", lemma.name()))
+        # Get all hypernyms (including inherited)
+        hypernym_paths = primary_synset.hypernym_paths()
+        for path in hypernym_paths:
+            for hypernym in path:
+                for lemma in hypernym.lemmas():
+                    if lemma.name() != word and len(lemma.name()) > 2:
+                        hints.append(("category", lemma.name()))
 
-        # Get holonyms (whole of which the word is a part)
-        for holonym in primary_synset.member_holonyms() + primary_synset.part_holonyms():
-            for lemma in holonym.lemmas():
-                if lemma.name() != word and len(lemma.name()) > 2:
-                    hints.add(("related", lemma.name()))
-
-    # Convert hints to list and shuffle
-    hints_list = list(hints)
-    random.shuffle(hints_list)
-    return hints_list[:num_hints]
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_hints = []
+    for hint in hints:
+        if hint[1] not in seen:
+            seen.add(hint[1])
+            unique_hints.append(hint)
+    
+    # Shuffle the hints to mix synonyms and categories
+    random.shuffle(unique_hints)
+    return unique_hints
 
 # Initialize session state
 if 'target_word' not in st.session_state:
@@ -85,24 +82,24 @@ if 'previous_guesses' not in st.session_state:
     st.session_state.previous_guesses = {}
 if 'hints' not in st.session_state:
     st.session_state.hints = []
-if 'current_hint_index' not in st.session_state:
-    st.session_state.current_hint_index = 0
-if 'shown_hints' not in st.session_state:
-    st.session_state.shown_hints = []
+if 'used_hints' not in st.session_state:
+    st.session_state.used_hints = []
+if 'hint_count' not in st.session_state:
+    st.session_state.hint_count = 0
 
 def reset_game():
     st.session_state.target_word = fetch_random_noun()
     st.session_state.game_over = False
     st.session_state.previous_guesses = {}
     st.session_state.hints = []
-    st.session_state.current_hint_index = 0
-    st.session_state.shown_hints = []
+    st.session_state.used_hints = []
+    st.session_state.hint_count = 0
 
 # Main game UI
 st.title("Word Guesser Game")
 
 if st.session_state.target_word:
-    st.write("Try to guess the noun!")
+    st.write("Try to guess the word!")
     
     # Create a form for the guess input and submit button
     with st.form(key='guess_form'):
@@ -132,37 +129,33 @@ if st.session_state.target_word:
                 st.write("Not quite, keep trying!")
 
     # Game control buttons
-    col1, col2,col3,_, col5 = st.columns(5)
+    col1, col2, col3, _, col5 = st.columns(5)
     with col1:
-        if st.button("Get Hints"):
+        if st.button("Get Hint"):
             # Generate hints if not already generated
             if not st.session_state.hints:
                 st.session_state.hints = get_semantic_hints(st.session_state.target_word)
             
             # If we have hints available
             if st.session_state.hints:
-                # Get current hint
-                current_hint = st.session_state.hints[st.session_state.current_hint_index]
-                hint_type, hint_word = current_hint
-                
-                # Add to shown hints if not already shown
-                if current_hint not in st.session_state.shown_hints:
-                    st.session_state.shown_hints.append(current_hint)
-                
-                # Increment hint index, loop back to 0 if we reach the end
-                st.session_state.current_hint_index = (st.session_state.current_hint_index + 1) % len(st.session_state.hints)
-                
-                # Display the current hint along with all previously shown hints
-                st.write("Current hint:")
-                st.info(f"{hint_word} ({hint_type})")
-                
-                if len(st.session_state.shown_hints) > 1:
-                    st.write("Previous hints:")
-                    for prev_hint_type, prev_hint_word in st.session_state.shown_hints[:-1]:
-                        st.write(f"- {prev_hint_word} ({prev_hint_type})")
+                if st.session_state.hint_count < len(st.session_state.hints):
+                    # Get next hint
+                    current_hint = st.session_state.hints[st.session_state.hint_count]
+                    hint_type, hint_word = current_hint
+                    
+                    # Display only the current hint with its type
+                    #st.write(f"Hint {st.session_state.hint_count + 1}/{len(st.session_state.hints)}:")
+                    if hint_type == "synonym":
+                        st.info(f"{hint_word}")
+                    else:
+                        st.success(f"{hint_word}")
+                    
+                    # Increment hint counter
+                    st.session_state.hint_count += 1
+                else:
+                    st.warning("No more hints available!")
             else:
-                st.write("Sorry, couldn't generate hints right now.")
-    
+                st.write("Sorry, couldn't generate hints for this word.")
     with col5:
         if st.button("New Game"):
             reset_game()
@@ -171,7 +164,6 @@ if st.session_state.target_word:
     with col3:
         if st.button("Reveal Answer"):
             st.write(f"The word was: {st.session_state.target_word}")
-            
 
     # Show previous guesses
     if st.session_state.previous_guesses:
