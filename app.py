@@ -42,9 +42,6 @@ def fetch_random_noun():
     st.error("Failed to fetch noun or no suitable nouns available")
     return None
 
-def calculate_similarity(guess, target):
-    """Legacy wrapper for calculate_enhanced_similarity"""
-    return calculate_enhanced_similarity(guess, target)
 
 def calculate_enhanced_similarity(guess, target):
     """
@@ -66,10 +63,6 @@ def calculate_enhanced_similarity(guess, target):
     if best_score == float('inf'):
         return 1000  # No similarity found
     return int(best_score * 1000)
-
-def get_semantic_hints(word):
-    """Legacy wrapper for get_enhanced_semantic_hints"""
-    return get_enhanced_semantic_hints(word)
 
 def get_enhanced_semantic_hints(word):
     """Generate semantic hints for the target word"""
