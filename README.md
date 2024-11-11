@@ -1,7 +1,7 @@
 # Word Guesser Game
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/ab4d3909-1844-406d-9e0a-e714035840ff" alt="Sublime's custom image"/>
+  <img src="https://github.com/user-attachments/assets/ab4d3909-1844-406d-9e0a-e714035840ff" width=80% image"/>
 </p>
 
 Try this on : https://wordguess.streamlit.app/
