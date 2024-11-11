@@ -1,9 +1,10 @@
 # Word Guesser Game
+
 <p align="center">
   <img src="https://github.com/user-attachments/assets/ab4d3909-1844-406d-9e0a-e714035840ff" alt="Sublime's custom image"/>
 </p>
 
-
+Try this on : https://wordguess.streamlit.app/
 ## Overview
 
 The Word Guesser Game is a Streamlit-based application that challenges users to guess a randomly selected word. The game provides semantic hints and calculates the similarity between the user's guess and the target word, giving feedback to help the user converge on the correct answer.
