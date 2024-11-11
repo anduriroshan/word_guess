@@ -1,6 +1,6 @@
 # Word Guesser Game
 
-![Word Guesser Game Flow Chart](images/Untitled diagram-2024-11-11-160629.png)
+![Word Guesser Game Flow Chart](images/Untitled diagram-2024-11-11-161110.png)
 
 ## Overview
 
