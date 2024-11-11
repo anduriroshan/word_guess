@@ -1,17 +1,5 @@
 # Word Guesser Game
-graph TD
-    A[Start Game] --> B[Fetch Random Noun]
-    B --> C[Display Game Interface]
-    C --> D[User Guess]
-    D --> E{Is Guess Correct?}
-    E -- No --> F[Calculate Similarity Score]
-    F --> G[Provide Feedback]
-    G --> H[Display Previous Guesses]
-    H --> I[Display Hints]
-    I --> C
-    E -- Yes --> J[Game Over]
-    J --> K[Reset Game]
-    K --> B
+
 ## Overview
 
 The Word Guesser Game is a Streamlit-based application that challenges users to guess a randomly selected word. The game provides semantic hints and calculates the similarity between the user's guess and the target word, giving feedback to help the user converge on the correct answer.
