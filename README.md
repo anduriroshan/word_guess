@@ -1,7 +1,8 @@
 # Word Guesser Game
 
+![Untitled diagram-2024-11-11-161344](https://github.com/user-attachments/assets/b26f34b5-3cb4-4673-a36b-f7a4e1ecb956)
 
-![Untitled diagram-2024-11-11-161110](https://github.com/user-attachments/assets/4942bfe3-d046-4f6a-9fdb-451d9b6eb2b4)
+
 
 ## Overview
 
