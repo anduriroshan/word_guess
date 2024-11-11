@@ -1,5 +1,5 @@
 # Word Guesser Game
-![alttext](images\My diagram.svg)
+![alttext](images/Untitled diagram-2024-11-11-160629.png)
 ## Overview
 
 The Word Guesser Game is a Streamlit-based application that challenges users to guess a randomly selected word. The game provides semantic hints and calculates the similarity between the user's guess and the target word, giving feedback to help the user converge on the correct answer.
