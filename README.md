@@ -1,4 +1,5 @@
 # Word Guesser Game
+![image](https://github.com/user-attachments/assets/75458a65-3e83-4533-a847-db3d5e010392)
 
 ## Overview
 
