@@ -1,6 +1,6 @@
 # Word Guesser Game
 
-<img src="images/Untitled diagram-2024-11-11-161347.svg" alt="Word Guesser Game Flow Chart" width="80%">
+<img src="images/Untitled diagram-2024-11-11-161347.svg" alt="Word Guesser Game Flow Chart">
 
 ## Overview
 
