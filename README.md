@@ -1,6 +1,7 @@
 # Word Guesser Game
 
-<img src="images/Untitled diagram-2024-11-11-163713.svg" alt="Word Guesser Game Flow Chart">
+![image](https://github.com/user-attachments/assets/ab4d3909-1844-406d-9e0a-e714035840ff)
+
 
 
 ## Overview
