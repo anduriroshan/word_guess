@@ -1,6 +1,6 @@
 # Word Guesser Game
 <p align="center">
-  <img src="https://github.com/waldyr/Sublime-Installer/blob/master/sublime_text.png?raw=true](https://github.com/user-attachments/assets/ab4d3909-1844-406d-9e0a-e714035840ff)" alt="Sublime's custom image"/>
+  <img src="https://github.com/user-attachments/assets/ab4d3909-1844-406d-9e0a-e714035840ff" alt="Sublime's custom image"/>
 </p>
 
 
